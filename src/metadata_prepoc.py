@@ -7,7 +7,7 @@ import numpy as np
 from datetime import datetime
 
 
-metadata = pd.read_csv(os.path.join("..","..","gutenberg-data","MetaData", "metadata.csv"))
+metadata = pd.read_csv(os.path.join("gutenberg-data","MetaData", "metadata.csv"))
 meta = pd.DataFrame(metadata)
 
 #selecting only english books
@@ -47,7 +47,7 @@ eng_meta = eng_meta.dropna(subset=['authoryearofbirth'])
 # ASSIGN GENDER
 
 #read the dataset with genders assigned to all names
-gender = pd.read_csv(os.path.join("..","..","gutenberg-data","GenderDataset","name_gender.csv"))
+gender = pd.read_csv(os.path.join("gutenberg-data","GenderDataset","name_gender.csv"))
 #make all names lower case
 gender["name"] =gender["name"].str.lower()
 
@@ -62,4 +62,5 @@ now = datetime.now()
 dt_string = str(now.strftime("%d-%m-%Y%H:%M:%S"))
 
 #write preprocessed file with time stamp in file name
-data.to_csv(os.path.join("..","..","gutenberg-data","MetaData",f"meta_gender_en_{dt_string}.csv"))  
+data.to_csv(os.path.join("gutenberg-data","MetaData",f"meta_gender_en_{dt_string}.csv")) 
+print("preprocessing finished") 
