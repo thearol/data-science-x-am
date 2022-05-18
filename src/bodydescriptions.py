@@ -4,13 +4,15 @@ import spacy
 from pathlib import Path
 import os
 import json
-from util_func import*
+from util_func import * #read_data, nouns_bodyparts, detect_owner, descriptive_words
 
 nlp = spacy.load("en_core_web_sm")
 nlp.add_pipe("sentencizer")
 
-def main():
 
+
+def main():
+    
     # read gender identification file
     with open(os.path.join("..", "meta","identify-gender.json"),"r") as fp:
         identifiable_gender = json.load(fp)
@@ -19,11 +21,11 @@ def main():
         author_genders = json.load(fp)
 
     # load dataframe containing bodyparts
-    body = pd.read_csv("bodyparts.csv")
+    body = pd.read_csv(os.path.join("..", "meta","bodyparts.csv"))
     bodywords = list(body["BodyPart"])
 
     # path to txt files
-    all_data_path = os.path.join( "..", "..", "gutenberg-data", "data-sub")
+    all_data_path = os.path.join( "..", "..", "gutenberg-data", "data")
 
     #read data
     texts, ids = read_data(all_data_path)
@@ -33,6 +35,7 @@ def main():
     main_df = pd.DataFrame(columns = column_names)
 
     for book, book_id in zip(texts,ids):
+        print(book_id)
         for chunk in nlp.pipe(book):
             for sentences in chunk.sents:
                 all_bodyparts = nouns_bodyparts(sentences, bodywords)
