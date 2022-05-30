@@ -1,5 +1,8 @@
-pip install -U pip setuptools wheel
-pip install -U spacy
-#python -m spacy download en_core_web_sm
-pandas
+spacy==3.3.0
+pandas==1.4.2
+seaborn==0.11.2
+matplotlib==3.5.2
+numpy==1.22.3
+adjustText==0.7.3
 
+# python -m spacy download en_core_web_sm

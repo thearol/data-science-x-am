@@ -1,0 +1,110 @@
+---
+title: "gender-representation overall"
+author: "Astrid Rybner"
+date: "5/24/2022"
+output: html_document
+---
+
+```{r}
+library(pacman)
+pacman::p_load(tidyverse, lmerTest, lme4, ggplot2, hrbrthemes, viridis)
+```
+
+# Read data 
+```{r}
+all <- read.csv("gender_counts_preprocessed.csv") %>% select(id, publish_date,  gender, male_mentions, female_mentions, total_pronouns, male_skewness_log)
+
+all$publish_date <- as.factor(all$publish_date)
+
+all$gender <- as.factor(all$gender) # Make gender into a binary dummy variable
+levels(all$gender) <- c(1,0) # Female = 1, Male = 0
+
+```
+
+# H1: Investigating the difference in overall proportion of female/male pronouns
+```{r}
+# standardize count of female/male pronouns
+all$female <- round((all$female_mentions/all$total_pronouns)*100, 0)
+all$male <- round((all$male_mentions/all$total_pronouns)*100, 0)
+
+# remove outliers (inf values)
+all <- all %>% filter(female < 100 & male < 100) 
+
+```
+
+
+# Independent t-test to see if there is a difference in number of male/female pronouns
+Following this: 
+https://datascienceplus.com/t-tests/ 
+
+# Welch's t-test
+```{r}
+t.test(x = all$female, y = all$male, paired = FALSE, var.equal = FALSE)
+```
+
+# Density plots of the proportions
+```{r}
+library(reshape2)
+
+# melt df to create count plots
+melted <- all %>% select(id, female, male) %>% melt(id = c("id")) 
+colnames(melted) <- c('id', 'Gender', 'Proportion')
+
+# calculate mean and sd vals
+library(plyr)
+mu <- ddply(melted, "Gender", summarise, grp.mean=mean(Proportion))
+sd <- ddply(melted, "Gender", summarise, grp.sd=sd(Proportion)) 
+
+# density plot with mean lines
+ggplot(melted, aes(x=Proportion, color=Gender)) +
+  geom_density()+ 
+  theme_bw() +
+  theme(plot.title = element_text(size=25),
+      axis.title.y = element_text(size=18),
+      axis.title.x = element_text(size=18),
+      axis.text.x = element_text(size = 15),
+      axis.text.y = element_text(size = 18),
+      legend.text = element_text(size = 18),
+      legend.title = element_text(size = 20)) +
+  geom_vline(data=mu, aes(xintercept=grp.mean, color=Gender),
+             linetype="dashed")+ 
+  ggtitle("Proportions of pronouns across corpus") +
+    ylab("Density") +
+    xlab("Proportion of total number of pronouns (%)") + scale_color_brewer(direction = -1, palette="Dark2") 
+
+ggsave("../output/density_plot.png", width = 30, height = 20, units = "cm")
+
+```
+
+# H2: Simple linear regression: Male skew predicted from gender of the author
+```{r}
+model <- lm(male_skewness_log ~ gender + publish_date, data = all)
+summary(model) #$coef
+
+# The average skew of females in year 1 = 1.19
+# Moving from female to male = adding 1.33 (nb this increase is in log odds)
+
+```
+
+# Violin plot
+```{r}
+
+levels(all$gender) <- c("Female authors","Male authors")
+
+ggplot(all, aes(x=gender, y=male_skewness_log, color=gender)) +
+    geom_violin() +
+    geom_jitter(color="grey", size=0.4, alpha=0.2) +
+    theme_bw() +
+    theme(plot.title = element_text(size=25),
+      axis.title.y = element_text(size=18),
+      axis.title.x = element_text(size=18),
+      axis.text.x = element_text(size = 15),
+      axis.text.y = element_text(size = 18),
+      legend.position = "none") + # legend.position="none" 
+      ylim(c(-5, 10)) +
+    ggtitle("Male skewness by gender of the author") +
+    ylab("Skewness score") +
+    xlab("Gender") + scale_color_brewer(direction = -1, palette="Set2") 
+
+ggsave("../output/skewness_plot.png", width = 30, height = 20, units = "cm")
+```
