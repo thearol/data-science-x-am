@@ -1,0 +1,108 @@
+---
+title: "Gender representation analysis"
+author: "Astrid Rybner"
+date: "5/20/2022"
+output: html_document
+---
+
+```{r}
+library(pacman)
+p_load(fpp3,fable, tidyverse, dplyr, tidyr, readxl)
+
+```
+
+# Calculate mean values
+Reading in the data, grouping by year and taking the mean and creating a timeseries object. 
+```{r}
+data <- read.csv("gender_counts_preprocessed.csv") %>% select(publish_date, gender, male_skewness_log)
+
+
+data <- data %>% filter(publish_date < 1961)
+
+grouped <- aggregate(data[,3], list(data$publish_date, data$gender), mean) 
+colnames(grouped) <- c('Year', 'Gender', 'value')
+
+timeseries <- grouped %>%
+  as_tsibble(index = Year, 
+             key = Gender)
+```
+
+# Identify missing variables
+```{r}
+# 141 distinct years in the period 1820-1960 (incuding both of these years)
+timeseries %>% filter(Gender=='F') %>% distinct(Year) # 124 for female
+timeseries %>% filter(Gender=='M') %>% distinct(Year) # 141 for male
+# so we have some missing values in some years for females!
+```
+
+# Fill in missing values
+Filling in the missing years with NA's, and then adding the value from the previous year
+```{r}
+timeseries_f <- timeseries %>% group_by_key() %>% tsibble::fill_gaps(Year) %>%
+  tidyr::fill(value, .direction = "down")
+
+```
+
+# Plotting the data 
+```{r}
+timeseries_f %>%
+  autoplot() +
+  labs(x = "Year", y = "Percentage", title = "Percentage of pronouns that are male")
+```
+The signal looks approximately stationary, and the variance looks approximately stationary. 
+
+# Is there a trend in the signal?
+```{r}
+f <- timeseries_f %>% filter(Gender =='F')
+m <- timeseries_f %>% filter(Gender =='M')
+
+
+library(Kendall)
+MannKendall(f$value) # significant negative trend for females
+MannKendall(m$value) # non significant negative trend for females
+
+```
+https://www.statisticshowto.com/mann-kendall-trend-test/ 
+
+The test was suggested by Mann (1945) and has been extensively used with environmental time
+series (Hipel and McLeod, 2005). 
+https://cran.r-project.org/web/packages/Kendall/Kendall.pdf 
+
+
+
+# Doing a STL decomposition (to understand the time series better)
+NB this is an additive decomposition method. 
+Looks like there is no seasonality and for female data; slightly increasing and for males a slightly decreasing trend. 
+
+```{r}
+# decomposition
+dcmp <- timeseries_f %>%
+  model(stl = STL())
+
+# looking at the trend and the remainder component separately 
+dcmp %>%
+  components() %>%
+  autoplot() + theme_bw() + scale_color_brewer(palette="Dark2")
+
+ggsave("../output/components.png", width = 30, height = 20, units = "cm")
+```
+
+# Plotting the raw data with the trend
+```{r}
+library(RColorBrewer)
+timeseries_f %>%
+  autoplot(value) + scale_color_brewer(direction = -1, palette="Set2")+
+  autolayer(components(dcmp), trend, color = "black") + geom_vline(xintercept = 1945, linetype="dashed", 
+                color = "blue", size=0.7) + theme_bw() + xlab("Year") + ylab(" ") + ggtitle("Trend in skewness by gender of the author") +
+  theme(plot.title = element_text(size=25),
+      axis.title.y = element_text(size=18),
+      axis.title.x = element_text(size=18),
+      axis.text.x = element_text(size = 15),
+      axis.text.y = element_text(size = 18),
+      legend.text = element_text(size = 15),
+      legend.title = element_text(size = 18))+
+  labs(x = "Year", y = "Proportion (log odds)")
+
+ggsave("../output/trend-raw-data.png", width = 30, height = 20, units = "cm")
+
+```
