@@ -48,7 +48,7 @@ You then need to download the full Project Gutenberg corpus via [The Standardize
 
 To analyze the same texts used in this analysis, the full corpus can then be filtered down using the metadata files in the ```meta``` folder. The txt files of the books should then be placed in a folder named ```data```
 
-Subsequently, the two main analsis can be run with: 
+Subsequently, the two main analysis can be run with: 
 ``` 
 python /src/gender-counts.py 
 python /src/bodydescriptions.py 
