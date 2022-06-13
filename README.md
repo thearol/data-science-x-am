@@ -40,7 +40,6 @@ To reproduce the analysis, you need to first clone this repository:
 
 ```
 git clone https://github.com/thearol/data-science-x-am
-cd /cool_programmer_tshirts2.0
 pip install -r requirements.txt
 ```
 
